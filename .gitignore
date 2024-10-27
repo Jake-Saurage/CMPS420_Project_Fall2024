@@ -1,0 +1,66 @@
+# Ignore Visual Studio temporary files, build results, and
+# package files.
+# Reference: https://github.com/github/gitignore/blob/main/VisualStudio.gitignore
+
+## Ignore build outputs
+[Bb]in/
+[Oo]bj/
+
+## Ignore Visual Studio project files
+*.user
+*.rsuser
+*.suo
+*.cache
+*.ilk
+*.log
+*.vs/
+
+## Ignore temporary files from the OS and IDE
+*.log
+*.vspscc
+.vscode/
+
+# Rider IDE-specific files
+.idea/
+*.sln.iml
+
+# Ignore compiled files
+*.dll
+*.exe
+*.pdb
+*.appx
+*.apk
+*.jar
+
+# NuGet packages
+*.nupkg
+*.snupkg
+.nuget/
+
+# Ignore database files
+*.mdf
+*.ldf
+
+# Dotnet specific files
+*.dbmdl
+*.pidb
+*.dotCover
+*.tgz
+.project/
+
+# ASP.NET Scaffolding
+ScaffoldingReadMe.txt
+
+# Configuration files
+appsettings*.json
+.env
+
+# Ignore publish output
+publish/
+*.Publish.xml
+
+# Ignore deployment settings
+.vs/
+
+# Ignore package managers
+node_modules/
