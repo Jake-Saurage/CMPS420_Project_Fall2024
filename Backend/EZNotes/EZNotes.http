@@ -1,0 +1,6 @@
+@EZNotes_HostAddress = http://localhost:5159
+
+GET {{EZNotes_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
