@@ -4,6 +4,10 @@ const EZNotes = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [fontSize, setFontSize] = useState(11);
   const [showSummary, setShowSummary] = useState(false);
+  const [showDefine, setShowDefine] = useState(false);
+  const [showOptions, setShowOptions] = useState(false);
+  const [buttonLabel, setButtonLabel] = useState("Options");
+  const [definitions, setDefinitions] = useState([]);
   const [wordCount, setWordCount] = useState(0);
   const [content, setContent] = useState('');
   const textAreaRef = useRef(null);
@@ -45,6 +49,56 @@ const EZNotes = () => {
 
     newText = content.substring(0, start) + replacement + content.substring(end);
     setContent(newText);
+  };
+
+  const handleOptionSelect = (option) => {
+    setShowOptions(false);
+
+    switch (option) {
+      case 'summary':
+        setButtonLabel("Summarize");
+        setShowSummary(false);
+        setDefinitions([]);
+        break;
+      case 'define':
+        setButtonLabel("Define");
+        setShowDefine(false);
+        setDefinitions([
+          "• ",
+          "• ",
+          "• "
+        ]);
+        break;
+      case 'keywords':
+        setButtonLabel("Keywords");
+        setShowSummary(false);
+        setDefinitions([
+          "• ",
+          "• ",
+          "• ",
+          "• ",
+          "• "
+          
+        ]);
+        break;
+      default:
+        setButtonLabel("Options");
+        setShowSummary(false);
+        setDefinitions([]);
+        break;
+    }
+  };
+
+  const handleButtonClick = () => {
+    if (buttonLabel === "Summarize") {
+      setShowSummary(true);
+    } else if (buttonLabel === "Define") {
+      setShowDefine(true);
+    }
+  };
+
+  const toggleDropdown = () => {
+    setShowOptions((prev) => !prev);
   };
 
   const styles = {
@@ -128,12 +182,26 @@ const EZNotes = () => {
       cursor: 'pointer',
       textAlign: 'center',
       transition: 'background-color 0.3s ease',
+      display: 'flex',
+      alignItems: 'center',
+      gap: '8px',
+    },
+    dropdownIcon: {
+      fontSize: '12px',
+      cursor: 'pointer',
     },
     whiteBox: {
       backgroundColor: 'white',
       border: '1px solid #ddd',
       borderRadius: '4px',
       height: '300px',
+      padding: '8px',
+      overflowY: 'auto',
+    },
+    definitionItem: {
+      margin: '8px 0',
+      listStyle: 'none',
+      color: '#333',
     },
     editorContainer: {
       flex: 1,
@@ -216,6 +284,23 @@ const EZNotes = () => {
       borderRadius: '4px',
       padding: '8px',
     },
+    dropdown: {
+      position: 'absolute',
+      backgroundColor: 'white',
+      boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+      borderRadius: '8px',
+      padding: '8px 0',
+      zIndex: 1000,
+      minWidth: '150px',
+    },
+    dropdownItem: {
+      padding: '8px 16px',
+      cursor: 'pointer',
+      color: '#374151',
+      '&:hover': {
+        backgroundColor: '#f3f4f6',
+      },
+    },
   };
 
   return (
@@ -270,13 +355,44 @@ const EZNotes = () => {
       <div style={styles.mainContent}>
         {/* Left Panel */}
         <div style={styles.leftPanel}>
-          <button
-            onClick={() => setShowSummary(true)}
-            style={styles.actionButton}
-          >
-            Summarize
-          </button>
-          <div style={styles.whiteBox} />
+          <div style={styles.actionButton}>
+            <button onClick={handleButtonClick} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'white' }}>
+              {buttonLabel}
+            </button>
+            <span onClick={toggleDropdown} style={styles.dropdownIcon}>▼</span>
+          </div>
+
+          {showOptions && (
+            <div style={styles.dropdown}>
+              <div
+                style={styles.dropdownItem}
+                onClick={() => handleOptionSelect('summary')}
+              >
+                Summary
+              </div>
+              <div
+                style={styles.dropdownItem}
+                onClick={() => handleOptionSelect('define')}
+              >
+                Define
+              </div>
+              <div
+                style={styles.dropdownItem}
+                onClick={() => handleOptionSelect('keywords')}
+              >
+                Keywords
+              </div>
+            </div>
+          )}
+
+          <div style={styles.whiteBox}>
+            {definitions.map((definition, index) => (
+              <div key={index} style={styles.definitionItem}>
+                {definition}
+              </div>
+            ))}
+          </div>
+
           <button
             onClick={() => setIsGenerating(!isGenerating)}
             style={{
@@ -301,6 +417,22 @@ const EZNotes = () => {
               </button>
             </div>
             <div style={styles.summaryContent} />
+          </div>
+        )}
+
+        {showDefine && (
+          <div style={styles.summaryPopup}>
+            <div style={styles.summaryHeader}>
+              <h3 style={styles.summaryTitle}>Definitions</h3>
+              <button style={styles.closeButton} onClick={() => setShowDefine(false)}>
+                ×
+              </button>
+            </div>
+            <div style={styles.summaryContent}>
+              {definitions.map((definition, index) => (
+                <p key={index} style={styles.definitionItem}>{definition}</p>
+              ))}
+            </div>
           </div>
         )}
 
