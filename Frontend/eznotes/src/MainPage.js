@@ -1,4 +1,5 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import './MainPage.css'; // Import the CSS file here
 
 const EZNotes = () => {
   const [isGenerating, setIsGenerating] = useState(false);
@@ -8,10 +9,10 @@ const EZNotes = () => {
   const [showKeywords, setShowKeywords] = useState(false);
   const [showKeywordsNoteSlide, setShowKeywordsNoteSlide] = useState(false);
   const [showOptions, setShowOptions] = useState(false);
-  const [buttonLabel, setButtonLabel] = useState("Options");
-  const [definitions, setDefinitions] = useState([""]);
-  const [keywords, setKeywords] = useState([""]);
-  const [notesSlideContent, setNotesSlideContent] = useState("");
+  const [buttonLabel, setButtonLabel] = useState('Options');
+  const [definitions, setDefinitions] = useState(['']);
+  const [keywords, setKeywords] = useState(['']);
+  const [notesSlideContent, setNotesSlideContent] = useState('');
   const [wordCount, setWordCount] = useState(0);
   const [content, setContent] = useState('');
   const textAreaRef = useRef(null);
@@ -21,7 +22,7 @@ const EZNotes = () => {
   const keywordsNoteSlidePopupRef = useRef(null);
 
   const handleWordCount = (text) => {
-    const words = text.trim().split(/\s+/).filter(word => word.length > 0);
+    const words = text.trim().split(/\s+/).filter((word) => word.length > 0);
     setWordCount(words.length);
   };
 
@@ -35,7 +36,6 @@ const EZNotes = () => {
 
     if (!selectedText) return;
 
-    let newText = content;
     let replacement = '';
 
     switch (type) {
@@ -55,7 +55,7 @@ const EZNotes = () => {
         return;
     }
 
-    newText = content.substring(0, start) + replacement + content.substring(end);
+    const newText = content.substring(0, start) + replacement + content.substring(end);
     setContent(newText);
   };
 
@@ -64,47 +64,47 @@ const EZNotes = () => {
 
     switch (option) {
       case 'summary':
-        setButtonLabel("Summarize");
+        setButtonLabel('Summarize');
         setShowSummary(true);
         setShowDefine(false);
         setShowKeywords(false);
         setShowKeywordsNoteSlide(false);
         break;
       case 'define':
-        setButtonLabel("Define");
+        setButtonLabel('Define');
         setShowDefine(true);
         setShowSummary(false);
         setShowKeywords(false);
         setShowKeywordsNoteSlide(false);
-        setDefinitions([""]);
+        setDefinitions(['']);
         break;
       case 'keywords':
-        setButtonLabel("Keywords");
+        setButtonLabel('Keywords');
         setShowKeywords(true);
         setShowSummary(false);
         setShowDefine(false);
         setShowKeywordsNoteSlide(true);
-        setKeywords([""]);
+        setKeywords(['']);
         break;
       default:
-        setButtonLabel("Options");
+        setButtonLabel('Options');
         setShowSummary(false);
         setShowDefine(false);
         setShowKeywords(false);
         setShowKeywordsNoteSlide(false);
-        setDefinitions([""]);
-        setKeywords([""]);
-        setNotesSlideContent("");
+        setDefinitions(['']);
+        setKeywords(['']);
+        setNotesSlideContent('');
         break;
     }
   };
 
   const handleButtonClick = () => {
-    if (buttonLabel === "Summarize") {
+    if (buttonLabel === 'Summarize') {
       setShowSummary(true);
-    } else if (buttonLabel === "Define") {
+    } else if (buttonLabel === 'Define') {
       setShowDefine(true);
-    } else if (buttonLabel === "Keywords") {
+    } else if (buttonLabel === 'Keywords') {
       setShowKeywords(true);
       setShowKeywordsNoteSlide(true);
     }
@@ -112,52 +112,6 @@ const EZNotes = () => {
 
   const toggleDropdown = () => {
     setShowOptions((prev) => !prev);
-  };
-
-  const handleDefineChange = (index, value) => {
-    const updatedDefinitions = [...definitions];
-    updatedDefinitions[index] = value;
-    setDefinitions(updatedDefinitions);
-  };
-
-  const handleDefineKeyDown = (e, index) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      const updatedDefinitions = [...definitions];
-      updatedDefinitions[index] = e.target.value;
-      setDefinitions([...updatedDefinitions, ""]);
-      setTimeout(() => {
-        const nextInput = document.getElementById(`definition-${index + 1}`);
-        if (nextInput) {
-          nextInput.focus();
-        }
-      }, 0);
-    }
-  };
-
-  const handleKeywordsChange = (index, value) => {
-    const updatedKeywords = [...keywords];
-    updatedKeywords[index] = value;
-    setKeywords(updatedKeywords);
-  };
-
-  const handleKeywordsKeyDown = (e, index) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      const updatedKeywords = [...keywords];
-      updatedKeywords[index] = e.target.value;
-      setKeywords([...updatedKeywords, ""]);
-      setTimeout(() => {
-        const nextInput = document.getElementById(`keyword-${index + 1}`);
-        if (nextInput) {
-          nextInput.focus();
-        }
-      }, 0);
-    }
-  };
-
-  const handleNotesSlideChange = (e) => {
-    setNotesSlideContent(e.target.value);
   };
 
   const makeDialogMovable = (ref) => {
@@ -196,199 +150,7 @@ const EZNotes = () => {
     }
   };
 
-  const styles = {
-    container: {
-      width: '100vw',
-      height: '100vh',
-      display: 'flex',
-      flexDirection: 'column',
-      backgroundColor: '#f0f0f0',
-    },
-    header: {
-      padding: '8px 16px',
-      backgroundColor: 'white',
-      borderBottom: '1px solid #ddd',
-    },
-    logo: {
-      fontSize: '20px',
-      color: 'rgb(118, 0, 181)',
-      fontWeight: 'bold',
-    },
-    menu: {
-      fontSize: '13px',
-      color: '#333',
-      marginTop: '2px',
-    },
-    toolbar: {
-      backgroundColor: '#f8f0ff',
-      padding: '6px 16px',
-      display: 'flex',
-      alignItems: 'center',
-      gap: '16px',
-      borderBottom: '1px solid #ddd',
-    },
-    fontSizeControl: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: '8px',
-    },
-    fontSizeButton: {
-      background: 'none',
-      border: 'none',
-      cursor: 'pointer',
-      fontSize: '16px',
-      color: '#666',
-    },
-    fontSizeDisplay: {
-      border: '1px solid #ddd',
-      padding: '2px 8px',
-      borderRadius: '2px',
-      backgroundColor: 'white',
-      minWidth: '24px',
-      textAlign: 'center',
-    },
-    formatButton: {
-      background: 'none',
-      border: 'none',
-      cursor: 'pointer',
-      padding: '4px 8px',
-      borderRadius: '4px',
-    },
-    mainContent: {
-      display: 'flex',
-      flex: 1,
-      overflow: 'hidden',
-    },
-    leftPanel: {
-      width: '275px',
-      backgroundColor: '#f8f0ff',
-      padding: '16px',
-      borderRight: '1px solid #ddd',
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '16px',
-    },
-    actionButton: {
-      backgroundColor: 'rgb(200, 100, 255)',
-      color: 'white',
-      border: 'none',
-      borderRadius: '20px',
-      padding: '8px 16px',
-      cursor: 'pointer',
-      textAlign: 'center',
-      transition: 'background-color 0.3s ease',
-      display: 'flex',
-      alignItems: 'center',
-      gap: '8px',
-    },
-    dropdownIcon: {
-      fontSize: '12px',
-      cursor: 'pointer',
-    },
-    dropdown: {
-      position: 'absolute',
-      backgroundColor: 'white',
-      boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-      borderRadius: '8px',
-      padding: '8px 0',
-      zIndex: 1000,
-      minWidth: '150px',
-      marginTop: '4px',
-    },
-    dropdownItem: {
-      padding: '8px 16px',
-      cursor: 'pointer',
-      color: '#374151',
-      '&:hover': {
-        backgroundColor: '#f3f4f6',
-      },
-    },
-    editorContainer: {
-      flex: 1,
-      overflowY: 'auto',
-      backgroundColor: '#f0f0f0',
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      padding: '24px',
-    },
-    page: {
-      width: '650px',
-      minHeight: '800px',
-      backgroundColor: 'white',
-      boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-      position: 'relative',
-      marginBottom: '24px',
-    },
-    textarea: {
-      width: '100%',
-      height: 'calc(100% - 48px)',
-      padding: '96px 96px 84px 96px',
-      border: 'none',
-      resize: 'none',
-      outline: 'none',
-      lineHeight: 1.5,
-      fontFamily: 'Arial, sans-serif',
-    },
-    pageNumber: {
-      position: 'absolute',
-      bottom: '40px',
-      width: '100%',
-      textAlign: 'center',
-      color: '#666',
-      fontSize: '10pt',
-    },
-    statusBar: {
-      height: '24px',
-      padding: '0 16px',
-      backgroundColor: '#f8f0ff',
-      borderTop: '1px solid #ddd',
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      fontSize: '12px',
-      color: '#666',
-    },
-    summaryPopup: {
-      position: 'absolute',
-      left: '325px',
-      top: '110px',
-      width: '450px',
-      backgroundColor: 'white',
-      borderRadius: '8px',
-      boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-      padding: '16px',
-      zIndex: 1000,
-    },
-    summaryHeader: {
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      marginBottom: '12px',
-      cursor: 'grab',
-    },
-    summaryTitle: {
-      margin: 0,
-      color: '#374151',
-      fontWeight: 600,
-    },
-    closeButton: {
-      background: 'none',
-      border: 'none',
-      cursor: 'pointer',
-      color: '#6b7280',
-      fontSize: '18px',
-    },
-    summaryContent: {
-      minHeight: '300px',
-      height: '300px',
-      border: '1px solid #e5e7eb',
-      borderRadius: '4px',
-      padding: '8px',
-    },
-  };
-
-  React.useEffect(() => {
+  useEffect(() => {
     makeDialogMovable(summaryPopupRef);
     makeDialogMovable(definePopupRef);
     makeDialogMovable(keywordsPopupRef);
@@ -396,209 +158,76 @@ const EZNotes = () => {
   }, [showSummary, showDefine, showKeywords, showKeywordsNoteSlide]);
 
   return (
-    <div style={styles.container}>
+    <div className="container">
       {/* Header */}
-      <div style={styles.header}>
-        <div style={styles.logo}>EZNOTES</div>
-        <div style={styles.menu}>File</div>
+      <div className="header">
+        <div className="logo">EZNOTES</div>
+        <div className="menu">File</div>
       </div>
 
       {/* Toolbar */}
-      <div style={styles.toolbar}>
-        <span style={{ color: '#ffd700' }}>☆</span>
-        
-        <div style={styles.fontSizeControl}>
-          <button 
-            onClick={() => setFontSize(prev => Math.max(8, prev - 1))}
-            style={styles.fontSizeButton}
-          >−</button>
-          <span style={styles.fontSizeDisplay}>{fontSize}</span>
-          <button 
-            onClick={() => setFontSize(prev => Math.min(72, prev + 1))}
-            style={styles.fontSizeButton}
-          >+</button>
+      <div className="toolbar">
+        <span className="star-icon">☆</span>
+
+        <div className="font-size-control">
+          <button onClick={() => setFontSize((prev) => Math.max(8, prev - 1))} className="font-size-button">
+            −
+          </button>
+          <span className="font-size-display">{fontSize}</span>
+          <button onClick={() => setFontSize((prev) => Math.min(72, prev + 1))} className="font-size-button">
+            +
+          </button>
         </div>
 
-        <span>Arial</span>
+        <span className="font-family">Arial</span>
 
-        <div style={{ display: 'flex', gap: '16px' }}>
-          <button 
-            onClick={() => handleTextFormat('bold')} 
-            style={{ ...styles.formatButton, fontWeight: 'bold' }}
-          >B</button>
-          <button 
-            onClick={() => handleTextFormat('italic')} 
-            style={{ ...styles.formatButton, fontStyle: 'italic' }}
-          >I</button>
-          <button 
-            onClick={() => handleTextFormat('underline')} 
-            style={{ ...styles.formatButton, textDecoration: 'underline' }}
-          >U</button>
+        <div className="text-format-buttons">
+          <button onClick={() => handleTextFormat('bold')} className="format-button bold">
+            B
+          </button>
+          <button onClick={() => handleTextFormat('italic')} className="format-button italic">
+            I
+          </button>
+          <button onClick={() => handleTextFormat('underline')} className="format-button underline">
+            U
+          </button>
         </div>
 
-        <button 
-          onClick={() => handleTextFormat('clear')}
-          style={styles.formatButton}
-        >
+        <button onClick={() => handleTextFormat('clear')} className="format-button clear">
           Clear Formatting
         </button>
       </div>
 
-      <div style={styles.mainContent}>
+      <div className="main-content">
         {/* Left Panel */}
-        <div style={styles.leftPanel}>
-          <div style={styles.actionButton}>
-            <button onClick={handleButtonClick} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'white' }}>
-              {buttonLabel}
-            </button>
-            <span onClick={toggleDropdown} style={styles.dropdownIcon}>▼</span>
+        <div className="left-panel">
+          <div className="action-button dropdown-button" onClick={toggleDropdown}>
+            <span>{buttonLabel}</span>
+            <span className="dropdown-icon">▼</span>
           </div>
 
           {showOptions && (
-            <div style={styles.dropdown}>
-              <div
-                style={styles.dropdownItem}
-                onClick={() => handleOptionSelect('summary')}
-              >
+            <div className="dropdown">
+              <div className="dropdown-item" onClick={() => handleOptionSelect('summary')}>
                 Summary
               </div>
-              <div
-                style={styles.dropdownItem}
-                onClick={() => handleOptionSelect('define')}
-              >
+              <div className="dropdown-item" onClick={() => handleOptionSelect('define')}>
                 Define
               </div>
-              <div
-                style={styles.dropdownItem}
-                onClick={() => handleOptionSelect('keywords')}
-              >
+              <div className="dropdown-item" onClick={() => handleOptionSelect('keywords')}>
                 Keywords
               </div>
             </div>
           )}
 
-          <button
-            onClick={() => setIsGenerating(!isGenerating)}
-            style={{
-              ...styles.actionButton,
-              backgroundColor: isGenerating ? 'rgb(160, 60, 215)' : 'rgb(200, 100, 255)',
-            }}
-          >
+          <button onClick={() => setIsGenerating(!isGenerating)} className={`action-button ${isGenerating ? 'generating' : ''}`}>
             {isGenerating ? 'Continue Generating' : 'Generate'}
           </button>
         </div>
 
-        {/* Summary Popup */}
-        {showSummary && (
-          <div ref={summaryPopupRef} style={{ ...styles.summaryPopup, minHeight: '400px' }}>
-            <div className="movable-header" style={styles.summaryHeader}>
-              <h3 style={styles.summaryTitle}>Summary</h3>
-              <button 
-                onClick={() => setShowSummary(false)}
-                style={styles.closeButton}
-              >
-                ×
-              </button>
-            </div>
-            <div style={styles.summaryContent}>
-              <textarea
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
-                style={{
-                  width: '100%',
-                  height: 'calc(100% - 48px)',
-                  padding: '8px',
-                  border: '1px solid #e5e7eb',
-                  borderRadius: '4px',
-                  outline: 'none',
-                  resize: 'none',
-                }}
-              />
-            </div>
-          </div>
-        )}
-
-        {showDefine && (
-          <div ref={definePopupRef} style={styles.summaryPopup}>
-            <div className="movable-header" style={styles.summaryHeader}>
-              <h3 style={styles.summaryTitle}>Definitions</h3>
-              <button style={styles.closeButton} onClick={() => setShowDefine(false)}>
-                ×
-              </button>
-            </div>
-            <div style={styles.summaryContent}>
-              {definitions.map((definition, index) => (
-                <div key={index} style={styles.definitionItem}>
-                  <span>• </span>
-                  <input
-                    id={`definition-${index}`}
-                    type="text"
-                    value={definition}
-                    onChange={(e) => handleDefineChange(index, e.target.value)}
-                    onKeyDown={(e) => handleDefineKeyDown(e, index)}
-                    style={{ width: 'calc(100% - 24px)', border: 'none', outline: 'none', padding: '4px', marginBottom: '8px' }}
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {showKeywords && (
-          <div ref={keywordsPopupRef} style={{ ...styles.summaryPopup, top: '110px' }}>
-            <div className="movable-header" style={styles.summaryHeader}>
-              <h3 style={styles.summaryTitle}>Keywords</h3>
-              <button style={styles.closeButton} onClick={() => setShowKeywords(false)}>
-                ×
-              </button>
-            </div>
-            <div style={styles.summaryContent}>
-              {keywords.map((keyword, index) => (
-                <div key={index} style={styles.definitionItem}>
-                  <span>• </span>
-                  <input
-                    id={`keyword-${index}`}
-                    type="text"
-                    value={keyword}
-                    onChange={(e) => handleKeywordsChange(index, e.target.value)}
-                    onKeyDown={(e) => handleKeywordsKeyDown(e, index)}
-                    style={{ width: 'calc(100% - 24px)', border: 'none', outline: 'none', padding: '4px', marginBottom: '8px' }}
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {showKeywordsNoteSlide && (
-          <div ref={keywordsNoteSlidePopupRef} style={{ ...styles.summaryPopup, top: '600px' }}>
-            <div className="movable-header" style={styles.summaryHeader}>
-              <h3 style={styles.summaryTitle}>Notes/Slide</h3>
-              <button style={styles.closeButton} onClick={() => setShowKeywordsNoteSlide(false)}>
-                ×
-              </button>
-            </div>
-            <div style={styles.summaryContent}>
-              <textarea
-                value={notesSlideContent}
-                onChange={handleNotesSlideChange}
-                style={{
-                  width: '100%',
-                  height: 'calc(100% - 48px)',
-                  padding: '8px',
-                  border: '1px solid #e5e7eb',
-                  borderRadius: '4px',
-                  outline: 'none',
-                  resize: 'none',
-                }}
-              />
-            </div>
-          </div>
-        )}
-
         {/* Editor */}
-        <div style={styles.editorContainer}>
-          <div style={styles.page}>
+        <div className="editor-container">
+          <div className="page">
             <textarea
               ref={textAreaRef}
               value={content}
@@ -606,18 +235,16 @@ const EZNotes = () => {
                 setContent(e.target.value);
                 handleWordCount(e.target.value);
               }}
-              style={{
-                ...styles.textarea,
-                fontSize: `${fontSize}pt`,
-              }}
+              style={{ fontSize: `${fontSize}pt` }}
+              className="textarea"
             />
-            <div style={styles.pageNumber}>1</div>
+            <div className="page-number">1</div>
           </div>
         </div>
       </div>
 
       {/* Status Bar */}
-      <div style={styles.statusBar}>
+      <div className="status-bar">
         <div>Page 1</div>
         <div>Words: {wordCount}</div>
       </div>

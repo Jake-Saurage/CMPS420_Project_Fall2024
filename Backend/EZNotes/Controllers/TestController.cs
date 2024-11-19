@@ -15,11 +15,21 @@ namespace EZNotes.Controllers
             _aiService = aiService;
         }
 
-        [HttpGet("generate-text")]
-        public async Task<IActionResult> GenerateText()
+        [HttpPost("summarize-text")]
+        public async Task<IActionResult> SummarizeText([FromBody] SummaryRequest request)
         {
-            string response = await _aiService.GenerateTextAsync();
+            if (request == null || string.IsNullOrWhiteSpace(request.Text))
+            {
+                return BadRequest("Invalid input. Please provide text to summarize.");
+            }
+
+            string response = await _aiService.GenerateSummaryAsync(request.Text);
             return Ok(response);
         }
+    }
+
+    public class SummaryRequest
+    {
+        public string Text { get; set; }
     }
 }

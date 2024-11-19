@@ -21,14 +21,13 @@ namespace EZNotes.Services
             _httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", _authToken);
         }
 
-        public async Task<string> GenerateTextAsync()
+        public async Task<string> GenerateSummaryAsync(string inputText)
         {
             // if (_cachedResponse != null) 
             // {
             //     return _cachedResponse; // Return cached response if it exists
             // }
 
-            var inputText = "what is the capital of the state louisiana?";
             var payload = new { inputs = inputText, parameters = new { max_new_tokens = 260 } };
 
             var content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");

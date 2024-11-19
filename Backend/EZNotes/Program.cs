@@ -4,12 +4,16 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Configure services
 builder.Services.AddHttpClient<AiService>();
+builder.Services.AddControllers();  // Add support for controllers
 builder.Services.AddSingleton<IConfiguration>(builder.Configuration);
+
 var app = builder.Build();
 
-// Test the AiService method here
-var aiService = app.Services.GetRequiredService<AiService>();
-var response = await aiService.GenerateTextAsync();
-Console.WriteLine(response);
+// Configure middleware
+app.UseRouting();
+app.UseEndpoints(endpoints =>
+{
+    endpoints.MapControllers(); // Map controllers
+});
 
 app.Run();
