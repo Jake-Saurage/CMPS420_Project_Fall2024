@@ -25,39 +25,55 @@ const EZNotes = () => {
     setWordCount(words.length);
   };
 
-  const handleTextFormat = (type) => {
-    const textarea = textAreaRef.current;
-    if (!textarea) return;
 
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const selectedText = content.substring(start, end);
+  
+  // Updated handleSummarize function
+const handleSummarize = async () => {
+  try {
+    const response = await fetch('http://localhost:5159/api/test/summarize-text', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ text: content }), // Send the user's content
+    });
+    if (!response.ok) {
+      throw new Error('Failed to summarize');
+    }
+    const data = await response.json();
+    setNotesSlideContent(data.summary); // Set the summarized text in the right-hand space
+    setShowSummary(false); // Close the summary popup
+  } catch (error) {
+    console.error('Error:', error);
+    alert('Failed to summarize. Please try again later.');
+  }
+};
 
-    if (!selectedText) return;
+// Updated handleDefine function
+const handleDefine = async () => {
+  try {
+    const response = await fetch('http://localhost:5159/api/test/define-words', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ words: definitions.filter((word) => word.trim() !== "") }), // Filter out empty words
+    });
 
-    let newText = content;
-    let replacement = '';
-
-    switch (type) {
-      case 'bold':
-        replacement = `**${selectedText}**`;
-        break;
-      case 'italic':
-        replacement = `*${selectedText}*`;
-        break;
-      case 'underline':
-        replacement = `_${selectedText}_`;
-        break;
-      case 'clear':
-        replacement = selectedText.replace(/[\*\_]/g, '');
-        break;
-      default:
-        return;
+    if (!response.ok) {
+      throw new Error('Failed to define words');
     }
 
-    newText = content.substring(0, start) + replacement + content.substring(end);
-    setContent(newText);
-  };
+    const data = await response.json();
+    setNotesSlideContent(data.definitions); // Display the definitions in the reserved space
+    setShowDefine(false); // Close the Define popup
+  } catch (error) {
+    console.error('Error:', error);
+    alert('Failed to define words. Please try again later.');
+  }
+};
+
+
 
   const handleOptionSelect = (option) => {
     setShowOptions(false);
@@ -196,6 +212,12 @@ const EZNotes = () => {
     }
   };
 
+  React.useEffect(() => {
+    makeDialogMovable(summaryPopupRef);
+    makeDialogMovable(definePopupRef);
+    makeDialogMovable(keywordsPopupRef);
+    makeDialogMovable(keywordsNoteSlidePopupRef);
+  }, [showSummary, showDefine, showKeywords, showKeywordsNoteSlide]);
   const styles = {
     container: {
       width: '100vw',
@@ -388,70 +410,26 @@ const EZNotes = () => {
     },
   };
 
-  React.useEffect(() => {
-    makeDialogMovable(summaryPopupRef);
-    makeDialogMovable(definePopupRef);
-    makeDialogMovable(keywordsPopupRef);
-    makeDialogMovable(keywordsNoteSlidePopupRef);
-  }, [showSummary, showDefine, showKeywords, showKeywordsNoteSlide]);
-
   return (
     <div style={styles.container}>
       {/* Header */}
       <div style={styles.header}>
         <div style={styles.logo}>EZNOTES</div>
-        <div style={styles.menu}>File</div>
       </div>
-
-      {/* Toolbar */}
-      <div style={styles.toolbar}>
-        <span style={{ color: '#ffd700' }}>☆</span>
-        
-        <div style={styles.fontSizeControl}>
-          <button 
-            onClick={() => setFontSize(prev => Math.max(8, prev - 1))}
-            style={styles.fontSizeButton}
-          >−</button>
-          <span style={styles.fontSizeDisplay}>{fontSize}</span>
-          <button 
-            onClick={() => setFontSize(prev => Math.min(72, prev + 1))}
-            style={styles.fontSizeButton}
-          >+</button>
-        </div>
-
-        <span>Arial</span>
-
-        <div style={{ display: 'flex', gap: '16px' }}>
-          <button 
-            onClick={() => handleTextFormat('bold')} 
-            style={{ ...styles.formatButton, fontWeight: 'bold' }}
-          >B</button>
-          <button 
-            onClick={() => handleTextFormat('italic')} 
-            style={{ ...styles.formatButton, fontStyle: 'italic' }}
-          >I</button>
-          <button 
-            onClick={() => handleTextFormat('underline')} 
-            style={{ ...styles.formatButton, textDecoration: 'underline' }}
-          >U</button>
-        </div>
-
-        <button 
-          onClick={() => handleTextFormat('clear')}
-          style={styles.formatButton}
-        >
-          Clear Formatting
-        </button>
-      </div>
-
+      {/* Main Content */}
       <div style={styles.mainContent}>
         {/* Left Panel */}
         <div style={styles.leftPanel}>
           <div style={styles.actionButton}>
-            <button onClick={handleButtonClick} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'white' }}>
+            <button
+              onClick={handleButtonClick}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'white' }}
+            >
               {buttonLabel}
             </button>
-            <span onClick={toggleDropdown} style={styles.dropdownIcon}>▼</span>
+            <span onClick={toggleDropdown} style={styles.dropdownIcon}>
+              ▼
+            </span>
           </div>
 
           {showOptions && (
@@ -493,7 +471,7 @@ const EZNotes = () => {
           <div ref={summaryPopupRef} style={{ ...styles.summaryPopup, minHeight: '400px' }}>
             <div className="movable-header" style={styles.summaryHeader}>
               <h3 style={styles.summaryTitle}>Summary</h3>
-              <button 
+              <button
                 onClick={() => setShowSummary(false)}
                 style={styles.closeButton}
               >
@@ -514,36 +492,76 @@ const EZNotes = () => {
                   resize: 'none',
                 }}
               />
-            </div>
-          </div>
-        )}
-
-        {showDefine && (
-          <div ref={definePopupRef} style={styles.summaryPopup}>
-            <div className="movable-header" style={styles.summaryHeader}>
-              <h3 style={styles.summaryTitle}>Definitions</h3>
-              <button style={styles.closeButton} onClick={() => setShowDefine(false)}>
-                ×
+              <button
+                onClick={handleSummarize}
+                style={{
+                  marginTop: '8px',
+                  padding: '8px 16px',
+                  backgroundColor: 'rgb(118, 0, 181)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                }}
+              >
+                Summarize
               </button>
             </div>
-            <div style={styles.summaryContent}>
-              {definitions.map((definition, index) => (
-                <div key={index} style={styles.definitionItem}>
-                  <span>• </span>
-                  <input
-                    id={`definition-${index}`}
-                    type="text"
-                    value={definition}
-                    onChange={(e) => handleDefineChange(index, e.target.value)}
-                    onKeyDown={(e) => handleDefineKeyDown(e, index)}
-                    style={{ width: 'calc(100% - 24px)', border: 'none', outline: 'none', padding: '4px', marginBottom: '8px' }}
-                  />
-                </div>
-              ))}
-            </div>
           </div>
         )}
 
+        {/* Define Popup */}
+{showDefine && (
+  <div ref={definePopupRef} style={styles.summaryPopup}>
+    <div className="movable-header" style={styles.summaryHeader}>
+      <h3 style={styles.summaryTitle}>Definitions</h3>
+      <button
+        style={styles.closeButton}
+        onClick={() => setShowDefine(false)}
+      >
+        ×
+      </button>
+    </div>
+    <div style={styles.summaryContent}>
+      {definitions.map((definition, index) => (
+        <div key={index} style={styles.definitionItem}>
+          <span>• </span>
+          <input
+            id={`definition-${index}`}
+            type="text"
+            value={definition}
+            onChange={(e) => handleDefineChange(index, e.target.value)}
+            onKeyDown={(e) => handleDefineKeyDown(e, index)}
+            style={{
+              width: 'calc(100% - 24px)',
+              border: 'none',
+              outline: 'none',
+              padding: '4px',
+              marginBottom: '8px',
+            }}
+          />
+        </div>
+      ))}
+      <button
+        onClick={handleDefine} // Call the AI define function
+        style={{
+          marginTop: '8px',
+          padding: '8px 16px',
+          backgroundColor: 'rgb(118, 0, 181)',
+          color: 'white',
+          border: 'none',
+          borderRadius: '4px',
+          cursor: 'pointer',
+        }}
+      >
+        Define Words
+      </button>
+    </div>
+  </div>
+)}
+
+
+        {/* Keywords Popup */}
         {showKeywords && (
           <div ref={keywordsPopupRef} style={{ ...styles.summaryPopup, top: '110px' }}>
             <div className="movable-header" style={styles.summaryHeader}>
@@ -562,7 +580,13 @@ const EZNotes = () => {
                     value={keyword}
                     onChange={(e) => handleKeywordsChange(index, e.target.value)}
                     onKeyDown={(e) => handleKeywordsKeyDown(e, index)}
-                    style={{ width: 'calc(100% - 24px)', border: 'none', outline: 'none', padding: '4px', marginBottom: '8px' }}
+                    style={{
+                      width: 'calc(100% - 24px)',
+                      border: 'none',
+                      outline: 'none',
+                      padding: '4px',
+                      marginBottom: '8px',
+                    }}
                   />
                 </div>
               ))}
@@ -570,6 +594,7 @@ const EZNotes = () => {
           </div>
         )}
 
+        {/* Keywords Note Slide */}
         {showKeywordsNoteSlide && (
           <div ref={keywordsNoteSlidePopupRef} style={{ ...styles.summaryPopup, top: '600px' }}>
             <div className="movable-header" style={styles.summaryHeader}>
@@ -596,24 +621,23 @@ const EZNotes = () => {
           </div>
         )}
 
-        {/* Editor */}
-        <div style={styles.editorContainer}>
-          <div style={styles.page}>
-            <textarea
-              ref={textAreaRef}
-              value={content}
-              onChange={(e) => {
-                setContent(e.target.value);
-                handleWordCount(e.target.value);
-              }}
-              style={{
-                ...styles.textarea,
-                fontSize: `${fontSize}pt`,
-              }}
-            />
-            <div style={styles.pageNumber}>1</div>
-          </div>
-        </div>
+      {/* Editor */}
+<div style={styles.editorContainer}>
+  <div style={styles.page}>
+    <textarea
+      ref={textAreaRef}
+      value={notesSlideContent} // Use the AI-generated content here
+      readOnly // Make it read-only
+      style={{
+        ...styles.textarea,
+        fontSize: `${fontSize}pt`,
+        backgroundColor: '#f9f9f9', // Light gray to indicate read-only
+      }}
+    />
+    <div style={styles.pageNumber}>1</div>
+  </div>
+</div>
+
       </div>
 
       {/* Status Bar */}
