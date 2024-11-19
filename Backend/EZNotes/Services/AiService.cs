@@ -69,13 +69,14 @@ namespace EZNotes.Services
         }
 
         private string CleanResponse(string aiResponse, string userInput)
-        {
-            // Remove the user input or any redundant information from the AI response
-            return aiResponse
-                .Replace(userInput, string.Empty, StringComparison.OrdinalIgnoreCase) // Remove user input
-                .Replace("Summarize this text concisely:", string.Empty, StringComparison.OrdinalIgnoreCase) // Remove prompt
-                .Replace("Define the term:", string.Empty, StringComparison.OrdinalIgnoreCase) // Remove prompt
-                .Trim();
-        }
+{
+    return aiResponse
+        .Replace(userInput, string.Empty, StringComparison.OrdinalIgnoreCase) // Remove user input
+        .Replace("Define the term:", string.Empty, StringComparison.OrdinalIgnoreCase) // Remove prompt
+        .Replace("Each definition should be on a new line:", string.Empty, StringComparison.OrdinalIgnoreCase) // Remove extra prompts
+        .Replace("Note:", string.Empty, StringComparison.OrdinalIgnoreCase) // Remove any notes
+        .Trim();
+}
+
     }
 }

@@ -25,55 +25,51 @@ const EZNotes = () => {
     setWordCount(words.length);
   };
 
-
-  
   // Updated handleSummarize function
-const handleSummarize = async () => {
-  try {
-    const response = await fetch('http://localhost:5159/api/test/summarize-text', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ text: content }), // Send the user's content
-    });
-    if (!response.ok) {
-      throw new Error('Failed to summarize');
+  const handleSummarize = async () => {
+    try {
+      const response = await fetch('http://localhost:5159/api/test/summarize-text', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ text: content }), // Send the user's content
+      });
+      if (!response.ok) {
+        throw new Error('Failed to summarize');
+      }
+      const data = await response.json();
+      setNotesSlideContent(data.summary); // Set the summarized text in the right-hand space
+      setShowSummary(false); // Close the summary popup
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Failed to summarize. Please try again later.');
     }
-    const data = await response.json();
-    setNotesSlideContent(data.summary); // Set the summarized text in the right-hand space
-    setShowSummary(false); // Close the summary popup
-  } catch (error) {
-    console.error('Error:', error);
-    alert('Failed to summarize. Please try again later.');
-  }
-};
+  };
 
-// Updated handleDefine function
-const handleDefine = async () => {
-  try {
-    const response = await fetch('http://localhost:5159/api/test/define-words', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ words: definitions.filter((word) => word.trim() !== "") }), // Filter out empty words
-    });
+  // Updated handleDefine function
+  const handleDefine = async () => {
+    try {
+      const response = await fetch('http://localhost:5159/api/test/define-words', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ words: definitions.filter((word) => word.trim() !== "") }), // Filter out empty words
+      });
 
-    if (!response.ok) {
-      throw new Error('Failed to define words');
+      if (!response.ok) {
+        throw new Error('Failed to define words');
+      }
+
+      const data = await response.json();
+      setNotesSlideContent(data.definitions); // Display the definitions in the reserved space
+      setShowDefine(false); // Close the Define popup
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Failed to define words. Please try again later.');
     }
-
-    const data = await response.json();
-    setNotesSlideContent(data.definitions); // Display the definitions in the reserved space
-    setShowDefine(false); // Close the Define popup
-  } catch (error) {
-    console.error('Error:', error);
-    alert('Failed to define words. Please try again later.');
-  }
-};
-
-
+  };
 
   const handleOptionSelect = (option) => {
     setShowOptions(false);
@@ -218,6 +214,7 @@ const handleDefine = async () => {
     makeDialogMovable(keywordsPopupRef);
     makeDialogMovable(keywordsNoteSlidePopupRef);
   }, [showSummary, showDefine, showKeywords, showKeywordsNoteSlide]);
+
   const styles = {
     container: {
       width: '100vw',
@@ -335,30 +332,30 @@ const handleDefine = async () => {
       padding: '24px',
     },
     page: {
-      width: '650px',
+      width: '600px',
+      height: '800px',
       minHeight: '800px',
       backgroundColor: 'white',
       boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
       position: 'relative',
       marginBottom: '24px',
+      padding: '16px',
+      overflow: 'hidden', // Add overflow hidden to prevent scroll bars
+    },
+    pageContainer: {
+      border: '4px solid black', // Wrap the page with a new container with a border
+      padding: '16px',
+      boxSizing: 'border-box',
     },
     textarea: {
       width: '100%',
-      height: 'calc(100% - 48px)',
-      padding: '96px 96px 84px 96px',
+      height: '100%', // Set height to 100% to fit the container
+      padding: '16px',
       border: 'none',
       resize: 'none',
       outline: 'none',
       lineHeight: 1.5,
       fontFamily: 'Arial, sans-serif',
-    },
-    pageNumber: {
-      position: 'absolute',
-      bottom: '40px',
-      width: '100%',
-      textAlign: 'center',
-      color: '#666',
-      fontSize: '10pt',
     },
     statusBar: {
       height: '24px',
@@ -372,10 +369,10 @@ const handleDefine = async () => {
       color: '#666',
     },
     summaryPopup: {
-      position: 'absolute',
-      left: '325px',
-      top: '110px',
-      width: '450px',
+      position: 'fixed', // Changed to fixed to prevent overlap
+      left: '20%', // Adjusted position to fit within bounds
+      top: '15%',
+      width: '400px', // Reduced width to fit comfortably
       backgroundColor: 'white',
       borderRadius: '8px',
       boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
@@ -402,8 +399,8 @@ const handleDefine = async () => {
       fontSize: '18px',
     },
     summaryContent: {
-      minHeight: '300px',
-      height: '300px',
+      minHeight: '200px', // Reduced height to fit
+      height: '200px',
       border: '1px solid #e5e7eb',
       borderRadius: '4px',
       padding: '8px',
@@ -468,7 +465,7 @@ const handleDefine = async () => {
 
         {/* Summary Popup */}
         {showSummary && (
-          <div ref={summaryPopupRef} style={{ ...styles.summaryPopup, minHeight: '400px' }}>
+          <div ref={summaryPopupRef} style={{ ...styles.summaryPopup, minHeight: '200px' }}>
             <div className="movable-header" style={styles.summaryHeader}>
               <h3 style={styles.summaryTitle}>Summary</h3>
               <button
@@ -511,59 +508,58 @@ const handleDefine = async () => {
         )}
 
         {/* Define Popup */}
-{showDefine && (
-  <div ref={definePopupRef} style={styles.summaryPopup}>
-    <div className="movable-header" style={styles.summaryHeader}>
-      <h3 style={styles.summaryTitle}>Definitions</h3>
-      <button
-        style={styles.closeButton}
-        onClick={() => setShowDefine(false)}
-      >
-        ×
-      </button>
-    </div>
-    <div style={styles.summaryContent}>
-      {definitions.map((definition, index) => (
-        <div key={index} style={styles.definitionItem}>
-          <span>• </span>
-          <input
-            id={`definition-${index}`}
-            type="text"
-            value={definition}
-            onChange={(e) => handleDefineChange(index, e.target.value)}
-            onKeyDown={(e) => handleDefineKeyDown(e, index)}
-            style={{
-              width: 'calc(100% - 24px)',
-              border: 'none',
-              outline: 'none',
-              padding: '4px',
-              marginBottom: '8px',
-            }}
-          />
-        </div>
-      ))}
-      <button
-        onClick={handleDefine} // Call the AI define function
-        style={{
-          marginTop: '8px',
-          padding: '8px 16px',
-          backgroundColor: 'rgb(118, 0, 181)',
-          color: 'white',
-          border: 'none',
-          borderRadius: '4px',
-          cursor: 'pointer',
-        }}
-      >
-        Define Words
-      </button>
-    </div>
-  </div>
-)}
-
+        {showDefine && (
+          <div ref={definePopupRef} style={styles.summaryPopup}>
+            <div className="movable-header" style={styles.summaryHeader}>
+              <h3 style={styles.summaryTitle}>Definitions</h3>
+              <button
+                style={styles.closeButton}
+                onClick={() => setShowDefine(false)}
+              >
+                ×
+              </button>
+            </div>
+            <div style={styles.summaryContent}>
+              {definitions.map((definition, index) => (
+                <div key={index} style={styles.definitionItem}>
+                  <span>• </span>
+                  <input
+                    id={`definition-${index}`}
+                    type="text"
+                    value={definition}
+                    onChange={(e) => handleDefineChange(index, e.target.value)}
+                    onKeyDown={(e) => handleDefineKeyDown(e, index)}
+                    style={{
+                      width: 'calc(100% - 24px)',
+                      border: 'none',
+                      outline: 'none',
+                      padding: '4px',
+                      marginBottom: '8px',
+                    }}
+                  />
+                </div>
+              ))}
+              <button
+                onClick={handleDefine} // Call the AI define function
+                style={{
+                  marginTop: '8px',
+                  padding: '8px 16px',
+                  backgroundColor: 'rgb(118, 0, 181)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                }}
+              >
+                Define Words
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Keywords Popup */}
         {showKeywords && (
-          <div ref={keywordsPopupRef} style={{ ...styles.summaryPopup, top: '110px' }}>
+          <div ref={keywordsPopupRef} style={{ ...styles.summaryPopup, top: '20%', width: '400px' }}>
             <div className="movable-header" style={styles.summaryHeader}>
               <h3 style={styles.summaryTitle}>Keywords</h3>
               <button style={styles.closeButton} onClick={() => setShowKeywords(false)}>
@@ -596,7 +592,7 @@ const handleDefine = async () => {
 
         {/* Keywords Note Slide */}
         {showKeywordsNoteSlide && (
-          <div ref={keywordsNoteSlidePopupRef} style={{ ...styles.summaryPopup, top: '600px' }}>
+          <div ref={keywordsNoteSlidePopupRef} style={{ ...styles.summaryPopup, top: '50%', width: '400px' }}>
             <div className="movable-header" style={styles.summaryHeader}>
               <h3 style={styles.summaryTitle}>Notes/Slide</h3>
               <button style={styles.closeButton} onClick={() => setShowKeywordsNoteSlide(false)}>
@@ -621,28 +617,27 @@ const handleDefine = async () => {
           </div>
         )}
 
-      {/* Editor */}
-<div style={styles.editorContainer}>
-  <div style={styles.page}>
-    <textarea
-      ref={textAreaRef}
-      value={notesSlideContent} // Use the AI-generated content here
-      readOnly // Make it read-only
-      style={{
-        ...styles.textarea,
-        fontSize: `${fontSize}pt`,
-        backgroundColor: '#f9f9f9', // Light gray to indicate read-only
-      }}
-    />
-    <div style={styles.pageNumber}>1</div>
-  </div>
-</div>
-
+        {/* Editor */}
+        <div style={styles.editorContainer}>
+          <div style={styles.pageContainer}>
+            <div style={styles.page}>
+              <textarea
+                ref={textAreaRef}
+                value={notesSlideContent} // Use the AI-generated content here
+                readOnly // Make it read-only
+                style={{
+                  ...styles.textarea,
+                  fontSize: `${fontSize}pt`,
+                  backgroundColor: '#f9f9f9', // Light gray to indicate read-only
+                }}
+              />
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Status Bar */}
       <div style={styles.statusBar}>
-        <div>Page 1</div>
         <div>Words: {wordCount}</div>
       </div>
     </div>

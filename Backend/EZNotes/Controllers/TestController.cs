@@ -72,7 +72,7 @@ public async Task<IActionResult> DefineWords([FromBody] DefineRequest request)
     try
     {
         // Create a concise and simple prompt
-        string prompt = $"Provide simple definitions for the following terms: {string.Join(", ", request.Words)}";
+        string prompt = $"Provide simple definitions for the following terms only: {string.Join(", ", request.Words)}. Each definition should be on a new line. Do not include any extra notes or additional terms.";
 
         // Call the AI service to generate definitions
         string aiResponse = await _aiService.GenerateDefinitionAsync(prompt);
@@ -83,14 +83,14 @@ public async Task<IActionResult> DefineWords([FromBody] DefineRequest request)
             return StatusCode(500, new { error = "Failed to define words. Please try again." });
         }
 
-        // Remove the prompt and user input from the AI's response
-        string[] cleanedDefinitions = aiResponse
-            .Split('\n')
+        // Format each definition to start on a new line and remove extra notes
+        string formattedResponse = string.Join("\n", aiResponse
+            .Split(new[] { '\n', '.', ';' }, StringSplitOptions.RemoveEmptyEntries)
+            .Where(line => !line.Contains("Note", StringComparison.OrdinalIgnoreCase)) // Remove lines with "note"
             .Select(line => line.Trim())
-            .Where(line => !string.IsNullOrWhiteSpace(line))
-            .ToArray();
+            .Where(line => !string.IsNullOrWhiteSpace(line))); // Clean up and remove empty lines
 
-        return Ok(new { definitions = cleanedDefinitions });
+        return Ok(new { definitions = formattedResponse });
     }
     catch (HttpRequestException ex)
     {
@@ -103,6 +103,7 @@ public async Task<IActionResult> DefineWords([FromBody] DefineRequest request)
         return StatusCode(500, new { error = "An unexpected error occurred. Please try again." });
     }
 }
+
 
 
 public class DefineRequest
