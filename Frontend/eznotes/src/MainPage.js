@@ -41,28 +41,36 @@ const EZNotes = () => {
 
   // Updated handleSummarize function
   const handleSummarize = async () => {
-    setIsGeneratingSummary(true);
+    setIsGeneratingSummary(true); // Indicate that the summary generation process has started
     try {
-      const response = await fetch('http://localhost:5159/api/test/summarize-text', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ text: content }),
-      });
-      if (!response.ok) {
-        throw new Error('Failed to summarize');
-      }
-      const data = await response.json();
-      setNotesSlideContent(data.summary);
-      setShowSummary(false);
+        // Make a POST request to the new long-summary API endpoint
+        const response = await fetch('http://localhost:5159/api/ai/long-summary', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ inputText: content }), // Pass the content as inputText
+        });
+
+        // Handle errors if the response is not OK
+        if (!response.ok) {
+            throw new Error('Failed to generate a long summary');
+        }
+
+        // Parse the JSON response
+        const data = await response.json();
+
+        // Update the UI with the generated summary
+        setNotesSlideContent(data.summary);
+        setShowSummary(false);
     } catch (error) {
-      console.error('Error:', error);
-      alert('Failed to summarize. Please try again later.');
+        console.error('Error:', error);
+        alert('Failed to generate a summary. Please try again later.');
     } finally {
-      setIsGeneratingSummary(false);
+        setIsGeneratingSummary(false); // Reset the generating state
     }
-  };
+};
+
 
   const handleDefine = async () => {
     setIsGeneratingDefine(true);
