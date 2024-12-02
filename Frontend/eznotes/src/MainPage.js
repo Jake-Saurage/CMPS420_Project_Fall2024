@@ -38,39 +38,29 @@ const EZNotes = () => {
     setFontSize(prevSize => Math.max(prevSize - 1, 8)); // Min font size of 8pt
   };
 
-
-  // Updated handleSummarize function
   const handleSummarize = async () => {
-    setIsGeneratingSummary(true); // Indicate that the summary generation process has started
+    setIsGeneratingSummary(true);
     try {
-        // Make a POST request to the new long-summary API endpoint
-        const response = await fetch('http://localhost:5159/api/ai/long-summary', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ inputText: content }), // Pass the content as inputText
-        });
-
-        // Handle errors if the response is not OK
-        if (!response.ok) {
-            throw new Error('Failed to generate a long summary');
-        }
-
-        // Parse the JSON response
-        const data = await response.json();
-
-        // Update the UI with the generated summary
-        setNotesSlideContent(data.summary);
-        setShowSummary(false);
+      const response = await fetch('http://localhost:5159/api/ai/long-summary', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ inputText: content }),
+      });
+      if (!response.ok) {
+        throw new Error('Failed to generate a long summary');
+      }
+      const data = await response.json();
+      setNotesSlideContent(data.summary);
+      setShowSummary(false);
     } catch (error) {
-        console.error('Error:', error);
-        alert('Failed to generate a summary. Please try again later.');
+      console.error('Error:', error);
+      alert('Failed to generate a summary. Please try again later.');
     } finally {
-        setIsGeneratingSummary(false); // Reset the generating state
+      setIsGeneratingSummary(false);
     }
-};
-
+  };
 
   const handleDefine = async () => {
     setIsGeneratingDefine(true);
@@ -97,16 +87,53 @@ const EZNotes = () => {
   };
 
   const handleKeywords = async () => {
+    const trimmedContent = notesSlideContent.trim(); // Ensure notes are non-empty
+    const trimmedKeywords = keywords.filter((word) => word.trim() !== ""); // Filter non-empty keywords
+
+    console.log("Content (trimmed):", trimmedContent);
+    console.log("Keywords (filtered):", trimmedKeywords);
+
+    if (!trimmedContent) {
+        alert("Notes cannot be empty."); // Specific error for notes
+        return;
+    }
+    if (trimmedKeywords.length === 0) {
+        alert("Keywords cannot be empty."); // Specific error for keywords
+        return;
+    }
+
     setIsGeneratingKeywords(true);
+
     try {
-      // Add your keywords API endpoint here
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulated API call
-      setShowKeywords(false);
+        const response = await fetch("http://localhost:5159/api/test/process-keywords", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                notes: trimmedContent,
+                keywords: trimmedKeywords,
+            }),
+        });
+
+        if (!response.ok) {
+            const errorResponse = await response.text();
+            console.error("API Error Response:", errorResponse);
+            throw new Error("Failed to process keywords");
+        }
+
+        const data = await response.json();
+        console.log("API Response:", data); // Debugging output
+        setContent(data.keywordDetails);
+        setShowKeywordsNoteSlide(false);
+        // // setNotesSlideContent(data.keywordDetails);
+        // setNotesSlideContent(data.keywordDetails); // Populate results
+        setShowKeywords(false);
     } catch (error) {
-      console.error('Error:', error);
-      alert('Failed to process keywords. Please try again later.');
+        console.error("Error:", error);
+        alert("Failed to process keywords. Please try again later.");
     } finally {
-      setIsGeneratingKeywords(false);
+        setIsGeneratingKeywords(false);
     }
   };
 
@@ -119,14 +146,14 @@ const EZNotes = () => {
         setShowSummary(true);
         setShowDefine(false);
         setShowKeywords(false);
-        setShowKeywordsNoteSlide(false);
+        // setShowKeywordsNoteSlide(true); // Ensuring the note slide appears when keywords are selected
         break;
       case 'define':
         setButtonLabel("Define");
         setShowDefine(true);
         setShowSummary(false);
         setShowKeywords(false);
-        setShowKeywordsNoteSlide(false);
+        setShowKeywordsNoteSlide(true);
         setDefinitions([""]);
         break;
       case 'keywords':
@@ -247,11 +274,11 @@ const EZNotes = () => {
     }
   };
 
-  React.useEffect(() => {
-    makeDialogMovable(summaryPopupRef);
-    makeDialogMovable(definePopupRef);
-    makeDialogMovable(keywordsPopupRef);
-    makeDialogMovable(keywordsNoteSlidePopupRef);
+  useEffect(() => {
+    if (showSummary) makeDialogMovable(summaryPopupRef);
+    if (showDefine) makeDialogMovable(definePopupRef);
+    if (showKeywords) makeDialogMovable(keywordsPopupRef);
+    if (showKeywordsNoteSlide) makeDialogMovable(keywordsNoteSlidePopupRef);
   }, [showSummary, showDefine, showKeywords, showKeywordsNoteSlide]);
 
   const themes = {
@@ -271,8 +298,8 @@ const EZNotes = () => {
         background: 'white',
         header: '#f9f9f9',
         border: '#e5e7eb',
-        shadowColor: 'rgba(0, 0, 0, 0.1)'
-      }
+        shadowColor: 'rgba(0, 0, 0, 0.1)',
+      },
     },
     dark: {
       background: '#121212',
@@ -291,10 +318,10 @@ const EZNotes = () => {
         background: '#2A2A2A',
         header: '#3A3A3A',
         border: '#555',
-        shadowColor: 'rgba(255, 255, 255, 0.1)'
-      }
-    }
-  };  
+        shadowColor: 'rgba(255, 255, 255, 0.1)',
+      },
+    },
+  };
 
   const getStyles = (theme) => ({
     container: {
@@ -387,7 +414,7 @@ const EZNotes = () => {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'space-between',
-      width: '95%', 
+      width: '95%',
       height: '40px', // Added explicit height
     },
     dropdownIcon: {
@@ -456,15 +483,15 @@ const EZNotes = () => {
       color: theme.text,
     },
     statusBar: {
-    height: '24px',
-    padding: '0 16px',
-    backgroundColor: theme.secondaryBackground,
-    borderTop: `1px solid ${theme.border}`,
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    fontSize: '12px',
-    color: theme.text,
+      height: '24px',
+      padding: '0 16px',
+      backgroundColor: theme.secondaryBackground,
+      borderTop: `1px solid ${theme.border}`,
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      fontSize: '12px',
+      color: theme.text,
     },
     summaryPopup: {
       position: 'fixed',
@@ -527,7 +554,7 @@ const EZNotes = () => {
     loadingIcon: {
       marginLeft: '8px',
       animation: 'spin 1s linear infinite',
-    }
+    },
   });
 
   const toggleDarkMode = () => {
@@ -539,101 +566,103 @@ const EZNotes = () => {
   return (
     <div style={styles.container}>
       {/* Dark Mode Toggle */}
-      <div style={{
-        position: 'absolute', 
-        top: '10px', 
-        right: '10px', 
-        zIndex: 1000,
-        display: 'flex',
-        alignItems: 'center',
-        gap: '10px'
-      }}>
+      <div
+        style={{
+          position: 'absolute',
+          top: '10px',
+          right: '10px',
+          zIndex: 1000,
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px',
+        }}
+      >
         {/* Font Size Controls */}
         <div style={styles.fontSizeControl}>
-          <button 
-            onClick={decreaseFontSize}
-            style={styles.fontSizeButton}
-          >
+          <button onClick={decreaseFontSize} style={styles.fontSizeButton}>
             -
           </button>
           <span style={styles.fontSizeDisplay}>{fontSize}</span>
-          <button 
-            onClick={increaseFontSize}
-            style={styles.fontSizeButton}
-          >
+          <button onClick={increaseFontSize} style={styles.fontSizeButton}>
             +
           </button>
         </div>
 
-        <button 
+        <button
           onClick={toggleDarkMode}
           style={{
-            backgroundColor: isDarkMode ? '#333' : '#f0f0f0',
-            color: isDarkMode ? 'white' : 'black',
-            border: 'none',
-            padding: '5px 18px',
-            borderRadius: '5px',
-            cursor: 'pointer',
+            backgroundColor: isDarkMode ? "#333" : "#f0f0f0",
+            color: isDarkMode ? "white" : "black",
+            border: "none",
+            padding: "5px 18px",
+            borderRadius: "5px",
+            cursor: "pointer",
           }}
         >
-          {isDarkMode ? '☀️ Light Mode' : '🌙 Dark Mode'}
+          {isDarkMode ? "☀️ Light Mode" : "🌙 Dark Mode"}
         </button>
       </div>
-  
+
       {/* Header */}
       <div style={styles.header}>
         <div style={styles.logo}>EZNOTES</div>
       </div>
-  
+
       {/* Main Content */}
       <div style={styles.mainContent}>
         {/* Left Panel */}
         <div style={styles.leftPanel}>
-          <div style={{
-            ...styles.actionButton, 
-            backgroundColor: '#C864FF'
-          }}>
+          <div
+            style={{
+              ...styles.actionButton,
+              backgroundColor: "#C864FF",
+            }}
+          >
             <button
               onClick={handleButtonClick}
-              style={{ 
-                background: 'none', 
-                border: 'none', 
-                cursor: 'pointer', 
-                color: isDarkMode ? themes.dark.text : 'white',
-                fontSize: '25px' 
+              style={{
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                color: isDarkMode ? themes.dark.text : "white",
+                fontSize: "25px",
               }}
             >
               {buttonLabel}
             </button>
-            <span 
-              onClick={toggleDropdown} 
+            <span
+              onClick={toggleDropdown}
               style={{
                 ...styles.dropdownIcon,
-                color: isDarkMode ? themes.dark.text : 'inherit'
+                color: isDarkMode ? themes.dark.text : "inherit",
               }}
             >
               ▼
             </span>
           </div>
-  
+
           {showOptions && (
-            <div style={{
-              ...styles.dropdown,
-              backgroundColor: isDarkMode ? themes.dark.primaryBackground : 'white',
-              fontSize: '20px',
-              boxShadow: isDarkMode 
-                ? '0 4px 6px rgba(255, 255, 255, 0.1)' 
-                : '0 4px 6px rgba(0, 0, 0, 0.1)'
-            }}>
+            <div
+              style={{
+                ...styles.dropdown,
+                backgroundColor: isDarkMode
+                  ? themes.dark.primaryBackground
+                  : "white",
+                fontSize: "20px",
+                boxShadow: isDarkMode
+                  ? "0 4px 6px rgba(255, 255, 255, 0.1)"
+                  : "0 4px 6px rgba(0, 0, 0, 0.1)",
+              }}
+            >
               {['summary', 'define', 'keywords'].map((option) => (
                 <div
                   key={option}
                   style={{
                     ...styles.dropdownItem,
-                    color: isDarkMode ? themes.dark.text : '#374151',
-                    '&:hover': {
-                      backgroundColor: isDarkMode ? '#3C3C3C' : '#f3f4f6'
-                    }
+                    color: isDarkMode ? themes.dark.text : "#374151",
+                    "&:hover": {
+                      backgroundColor: isDarkMode ? "#3C3C3C" : "#f3f4f6",
+                    },
                   }}
                   onClick={() => handleOptionSelect(option)}
                 >
@@ -646,7 +675,10 @@ const EZNotes = () => {
 
         {/* Summary Popup */}
         {showSummary && (
-          <div ref={summaryPopupRef} style={{ ...styles.summaryPopup, minHeight: '200px' }}>
+          <div
+            ref={summaryPopupRef}
+            style={{ ...styles.summaryPopup, minHeight: "200px" }}
+          >
             <div className="movable-header" style={styles.summaryHeader}>
               <h3 style={styles.summaryTitle}>Summary</h3>
               <button
@@ -661,29 +693,32 @@ const EZNotes = () => {
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
                 style={{
-                  width: '95%',
-                  height: 'calc(100% - 48px)',
-                  outline: 'none',
-                  resize: 'none',
-                  backgroundColor: isDarkMode ? themes.dark.page : styles.statusBar.editorBackground,
-
+                  width: "95%",
+                  height: "calc(100% - 48px)",
+                  outline: "none",
+                  resize: "none",
+                  backgroundColor: isDarkMode
+                    ? themes.dark.page
+                    : styles.statusBar.editorBackground,
                 }}
               />
               <button
                 onClick={handleSummarize}
                 disabled={isGeneratingSummary}
                 style={{
-                  marginTop: '8px',
-                  padding: '8px 16px',
-                  backgroundColor: 'rgb(118, 0, 181)',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '4px',
-                  cursor: 'pointer',
+                  marginTop: "8px",
+                  padding: "8px 16px",
+                  backgroundColor: "rgb(118, 0, 181)",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "4px",
+                  cursor: "pointer",
                 }}
               >
-                <span>{isGeneratingSummary ? 'Summarize' : 'Summarize'}</span>
-                {isGeneratingSummary && <Loader2 size={16} style={styles.loadingIcon} />}
+                <span>{isGeneratingSummary ? "Summarize" : "Summarize"}</span>
+                {isGeneratingSummary && (
+                  <Loader2 size={16} style={styles.loadingIcon} />
+                )}
               </button>
             </div>
           </div>
@@ -712,13 +747,14 @@ const EZNotes = () => {
                     onChange={(e) => handleDefineChange(index, e.target.value)}
                     onKeyDown={(e) => handleDefineKeyDown(e, index)}
                     style={{
-                      width: 'calc(100% - 24px)',
-                      border: 'none',
-                      outline: 'none',
-                      padding: '4px',
-                      marginBottom: '8px',
-                      backgroundColor: isDarkMode ? themes.dark.page : styles.statusBar.editorBackground,
-
+                      width: "calc(100% - 24px)",
+                      border: "none",
+                      outline: "none",
+                      padding: "4px",
+                      marginBottom: "8px",
+                      backgroundColor: isDarkMode
+                        ? themes.dark.page
+                        : styles.statusBar.editorBackground,
                     }}
                   />
                 </div>
@@ -726,17 +762,19 @@ const EZNotes = () => {
               <button
                 onClick={handleDefine} // Call the AI define function
                 style={{
-                  marginTop: '8px',
-                  padding: '8px 16px',
-                  backgroundColor: 'rgb(118, 0, 181)',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '4px',
-                  cursor: 'pointer',
+                  marginTop: "8px",
+                  padding: "8px 16px",
+                  backgroundColor: "rgb(118, 0, 181)",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "4px",
+                  cursor: "pointer",
                 }}
               >
-                <span>{isGeneratingDefine ? 'Define' : 'Define'}</span>
-                {isGeneratingDefine && <Loader2 size={16} style={styles.loadingIcon} />}
+                <span>{isGeneratingDefine ? "Define" : "Define"}</span>
+                {isGeneratingDefine && (
+                  <Loader2 size={16} style={styles.loadingIcon} />
+                )}
               </button>
             </div>
           </div>
@@ -744,10 +782,16 @@ const EZNotes = () => {
 
         {/* Keywords Popup */}
         {showKeywords && (
-          <div ref={keywordsPopupRef} style={{ ...styles.summaryPopup, top: '20%', width: '400px' }}>
+          <div
+            ref={keywordsPopupRef}
+            style={{ ...styles.summaryPopup, top: "20%", width: "400px" }}
+          >
             <div className="movable-header" style={styles.summaryHeader}>
               <h3 style={styles.summaryTitle}>Keywords</h3>
-              <button style={styles.closeButton} onClick={() => setShowKeywords(false)}>
+              <button
+                style={styles.closeButton}
+                onClick={() => setShowKeywords(false)}
+              >
                 ×
               </button>
             </div>
@@ -762,27 +806,53 @@ const EZNotes = () => {
                     onChange={(e) => handleKeywordsChange(index, e.target.value)}
                     onKeyDown={(e) => handleKeywordsKeyDown(e, index)}
                     style={{
-                      width: 'calc(100% - 24px)',
-                      border: 'none',
-                      outline: 'none',
-                      padding: '4px',
-                      marginBottom: '8px',
-                      backgroundColor: isDarkMode ? themes.dark.page : styles.statusBar.editorBackground,
-
+                      width: "calc(100% - 24px)",
+                      border: "none",
+                      outline: "none",
+                      padding: "4px",
+                      marginBottom: "8px",
+                      backgroundColor: isDarkMode
+                        ? themes.dark.page
+                        : styles.statusBar.editorBackground,
                     }}
                   />
                 </div>
               ))}
+              <button
+                onClick={handleKeywords} // Call the AI process for keywords
+                style={{
+                  marginTop: "8px",
+                  padding: "8px 16px",
+                  backgroundColor: "rgb(118, 0, 181)",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "4px",
+                  cursor: "pointer",
+                }}
+              >
+                <span>
+                  {isGeneratingKeywords ? "Processing..." : "Generate"}
+                </span>
+                {isGeneratingKeywords && (
+                  <Loader2 size={16} style={styles.loadingIcon} />
+                )}
+              </button>
             </div>
           </div>
         )}
 
         {/* Keywords Note Slide */}
         {showKeywordsNoteSlide && (
-          <div ref={keywordsNoteSlidePopupRef} style={{ ...styles.summaryPopup, top: '50%', width: '400px' }}>
+          <div
+            ref={keywordsNoteSlidePopupRef}
+            style={{ ...styles.summaryPopup, top: "50%", width: "400px" }}
+          >
             <div className="movable-header" style={styles.summaryHeader}>
               <h3 style={styles.summaryTitle}>Notes/Slide</h3>
-              <button style={styles.closeButton} onClick={() => setShowKeywordsNoteSlide(false)}>
+              <button
+                style={styles.closeButton}
+                onClick={() => setShowKeywordsNoteSlide(false)}
+              >
                 ×
               </button>
             </div>
@@ -791,15 +861,16 @@ const EZNotes = () => {
                 value={notesSlideContent}
                 onChange={handleNotesSlideChange}
                 style={{
-                  width: '100%',
-                  height: 'calc(100% - 48px)',
-                  padding: '8px',
-                  border: '1px solid #e5e7eb',
-                  borderRadius: '4px',
-                  outline: 'none',
-                  resize: 'none',
-                  backgroundColor: isDarkMode ? themes.dark.page : styles.statusBar.editorBackground,
-
+                  width: "100%",
+                  height: "calc(100% - 48px)",
+                  padding: "8px",
+                  border: "1px solid #e5e7eb",
+                  borderRadius: "4px",
+                  outline: "none",
+                  resize: "none",
+                  backgroundColor: isDarkMode
+                    ? themes.dark.page
+                    : styles.statusBar.editorBackground,
                 }}
               />
             </div>
@@ -812,17 +883,23 @@ const EZNotes = () => {
             <div style={styles.page}>
               <textarea
                 ref={textAreaRef}
-                value={notesSlideContent} // Use the AI-generated content here
+                value={content} // Use the user-input content here
                 onChange={(e) => {
-                setContent(e.target.value);
-                handleWordCount(e.target.value);
+                  setContent(e.target.value);
+                  handleWordCount(e.target.value);
                 }}
                 style={{
                   ...styles.textarea,
                   fontSize: `${fontSize}pt`,
-                  backgroundColor: isDarkMode ? themes.dark.page : styles.statusBar.editorBackground,
-                  borderTop: `1px solid ${isDarkMode ? themes.dark.border : '#ddd'}`,
-                  color: isDarkMode ? themes.dark.text : styles.statusBar.color // Light gray to indicate read-only
+                  backgroundColor: isDarkMode
+                    ? themes.dark.page
+                    : styles.statusBar.editorBackground,
+                  borderTop: `1px solid ${
+                    isDarkMode ? themes.dark.border : "#ddd"
+                  }`,
+                  color: isDarkMode
+                    ? themes.dark.text
+                    : styles.statusBar.color, // Light gray to indicate read-only
                 }}
               />
             </div>
@@ -831,16 +908,22 @@ const EZNotes = () => {
       </div>
 
       {/* Status Bar */}
-       <div style={{
-      ...styles.statusBar,
-      backgroundColor: isDarkMode ? themes.dark.secondaryBackground : styles.statusBar.backgroundColor,
-      borderTop: `1px solid ${isDarkMode ? themes.dark.border : '#ddd'}`,
-      color: isDarkMode ? themes.dark.text : styles.statusBar.color
-    }}>
-      <div>Page 1</div>
-      <div>Words: {wordCount}</div>
+      <div
+        style={{
+          ...styles.statusBar,
+          backgroundColor: isDarkMode
+            ? themes.dark.secondaryBackground
+            : styles.statusBar.backgroundColor,
+          borderTop: `1px solid ${
+            isDarkMode ? themes.dark.border : "#ddd"
+          }`,
+          color: isDarkMode ? themes.dark.text : styles.statusBar.color,
+        }}
+      >
+        <div>Page 1</div>
+        <div>Words: {wordCount}</div>
+      </div>
     </div>
-  </div>
   );
 };
 

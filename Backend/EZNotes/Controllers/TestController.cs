@@ -3,7 +3,6 @@ using System.Threading.Tasks;
 using EZNotes.Services;
 using Microsoft.Extensions.Logging;
 using System.ComponentModel.DataAnnotations;
-using System.Text.Json;
 using System.Linq;
 
 namespace EZNotes.Controllers
@@ -31,11 +30,7 @@ namespace EZNotes.Controllers
 
             try
             {
-                // Create a prompt explicitly asking for a summary without referencing the input
-                string prompt = $"Summarize the following text in a concise and clear manner without including or repeating the original text:\n\n{request.Text}";
-
-                // Call the AI service to generate the summary
-                string aiResponse = await _aiService.GenerateSummaryAsync(prompt);
+                string aiResponse = await _aiService.GenerateSummaryAsync(request.Text);
 
                 if (string.IsNullOrWhiteSpace(aiResponse))
                 {
@@ -43,8 +38,7 @@ namespace EZNotes.Controllers
                     return StatusCode(500, new { error = "Failed to generate a summary. Please try again." });
                 }
 
-                // Ensure the AI response only contains the summary
-                string summary = aiResponse.Trim(); // Clean up any leading or trailing whitespace
+                string summary = aiResponse.Trim();
 
                 return Ok(new { summary });
             }
@@ -70,11 +64,7 @@ namespace EZNotes.Controllers
 
             try
             {
-                // Create a concise and simple prompt
-                string prompt = $"Provide simple definitions for the following terms only: {string.Join(", ", request.Words)}. Each definition should be on a new line. Do not include any extra notes or additional terms.";
-
-                // Call the AI service to generate definitions
-                string aiResponse = await _aiService.GenerateDefinitionAsync(prompt);
+                string aiResponse = await _aiService.GenerateDefinitionAsync(string.Join(", ", request.Words));
 
                 if (string.IsNullOrWhiteSpace(aiResponse))
                 {
@@ -82,12 +72,10 @@ namespace EZNotes.Controllers
                     return StatusCode(500, new { error = "Failed to define words. Please try again." });
                 }
 
-                // Format each definition to start on a new line and remove extra notes
                 string formattedResponse = string.Join("\n", aiResponse
                     .Split(new[] { '\n', '.', ';' }, StringSplitOptions.RemoveEmptyEntries)
-                    .Where(line => !line.Contains("Note", StringComparison.OrdinalIgnoreCase)) // Remove lines with "note"
                     .Select(line => line.Trim())
-                    .Where(line => !string.IsNullOrWhiteSpace(line))); // Clean up and remove empty lines
+                    .Where(line => !string.IsNullOrWhiteSpace(line)));
 
                 return Ok(new { definitions = formattedResponse });
             }
@@ -102,10 +90,42 @@ namespace EZNotes.Controllers
                 return StatusCode(500, new { error = "An unexpected error occurred. Please try again." });
             }
         }
+
+        [HttpPost("process-keywords")]
+        public async Task<IActionResult> ProcessKeywords([FromBody] KeywordRequest request)
+        {
+            if (request == null || string.IsNullOrWhiteSpace(request.Notes) || request.Keywords == null || request.Keywords.Length == 0)
+            {
+                return BadRequest(new { error = "Invalid input. Please provide both notes and keywords." });
+            }
+
+            try
+            {
+                string keywordDetails = await _aiService.FetchKeywordDetailsAsync(request.Notes, request.Keywords);
+
+                if (string.IsNullOrWhiteSpace(keywordDetails))
+                {
+                    _logger.LogWarning("AI service returned an empty response for keywords: {Keywords}", string.Join(", ", request.Keywords));
+                    return StatusCode(500, new { error = "Failed to process keywords. Please try again." });
+                }
+
+                return Ok(new { keywordDetails });
+            }
+            catch (HttpRequestException ex)
+            {
+                _logger.LogError(ex, "Error occurred while calling the AI service.");
+                return StatusCode(503, new { error = "The AI service is currently unavailable. Please try again later." });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An unexpected error occurred.");
+                return StatusCode(500, new { error = "An unexpected error occurred. Please try again." });
+            }
+        }
     }
 
-    [Route("api/[controller]")]
     [ApiController]
+    [Route("api/[controller]")]
     public class AiController : ControllerBase
     {
         private readonly AiService _aiService;
@@ -154,5 +174,14 @@ namespace EZNotes.Controllers
     {
         [Required(ErrorMessage = "The text field is required.")]
         public string Text { get; set; }
+    }
+
+    public class KeywordRequest
+    {
+        [Required(ErrorMessage = "The notes field is required.")]
+        public string Notes { get; set; }
+
+        [Required(ErrorMessage = "The keywords field is required.")]
+        public string[] Keywords { get; set; }
     }
 }
