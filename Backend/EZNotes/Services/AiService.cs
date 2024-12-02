@@ -111,105 +111,191 @@ namespace EZNotes.Services
             return aiResponse.Trim();
         }
 
-public async Task<string> GenerateLongSummaryAsync(string inputText)
-{
-    // Set the authorization header for the appropriate API key
-    SetAuthorizationHeader(useModel2: false);
-
-    const string BART_API_URL = "https://api-inference.huggingface.co/models/facebook/bart-large-cnn";
-
-    var payload = new
-    {
-        inputs = inputText,
-        parameters = new
+        public async Task<string> GenerateLongSummaryAsync(string inputText)
         {
-            max_length = 750, // Adjust maximum length for the summary
-            min_length = 150,  // Adjust minimum length for the summary
-            do_sample = false // Ensure deterministic output
-        }
-    };
+            SetAuthorizationHeader(useModel2: false);
 
-    var content = CreateHttpContent(payload);
+            const string BART_API_URL = "https://api-inference.huggingface.co/models/facebook/bart-large-cnn";
 
-    int maxRetries = 3; // Maximum number of retries for loading issues
-    int retryCount = 0;
-
-    while (retryCount < maxRetries)
-    {
-        var response = await _httpClient.PostAsync(BART_API_URL, content);
-
-        var jsonResponse = await response.Content.ReadAsStringAsync();
-        _logger.LogInformation("Raw response from Hugging Face: {Response}", jsonResponse);
-
-        if (response.IsSuccessStatusCode)
-        {
-            try
+            var payload = new
             {
-                using var document = JsonDocument.Parse(jsonResponse);
-
-                // Check if the response is an array with at least one element
-                if (document.RootElement.ValueKind == JsonValueKind.Array && document.RootElement.GetArrayLength() > 0)
+                inputs = inputText,
+                parameters = new
                 {
-                    var firstElement = document.RootElement[0];
-                    if (firstElement.TryGetProperty("summary_text", out var summaryText))
+                    max_length = 750, // Adjust maximum length for the summary
+                    min_length = 150, // Adjust minimum length for the summary
+                    do_sample = false // Ensure deterministic output
+                }
+            };
+
+            var content = CreateHttpContent(payload);
+
+            int maxRetries = 3; // Maximum number of retries for loading issues
+            int retryCount = 0;
+
+            while (retryCount < maxRetries)
+            {
+                var response = await _httpClient.PostAsync(BART_API_URL, content);
+
+                var jsonResponse = await response.Content.ReadAsStringAsync();
+                _logger.LogInformation("Raw response from Hugging Face: {Response}", jsonResponse);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    try
                     {
-                        var aiResponse = summaryText.GetString();
-                        if (!string.IsNullOrWhiteSpace(aiResponse))
+                        using var document = JsonDocument.Parse(jsonResponse);
+
+                        if (document.RootElement.ValueKind == JsonValueKind.Array && document.RootElement.GetArrayLength() > 0)
                         {
-                            return aiResponse.Trim();
+                            var firstElement = document.RootElement[0];
+                            if (firstElement.TryGetProperty("summary_text", out var summaryText))
+                            {
+                                var aiResponse = summaryText.GetString();
+                                if (!string.IsNullOrWhiteSpace(aiResponse))
+                                {
+                                    return aiResponse.Trim();
+                                }
+                                else
+                                {
+                                    throw new Exception("The 'summary_text' key is empty.");
+                                }
+                            }
+                            else
+                            {
+                                throw new Exception("The 'summary_text' key is missing in the response.");
+                            }
                         }
                         else
                         {
-                            throw new Exception("The 'summary_text' key is empty.");
+                            throw new Exception("Unexpected API response format.");
                         }
                     }
-                    else
+                    catch (JsonException ex)
                     {
-                        throw new Exception("The 'summary_text' key is missing in the response.");
+                        _logger.LogError(ex, "Error parsing Hugging Face response.");
+                        throw new Exception("Failed to parse AI service response.", ex);
                     }
                 }
                 else
                 {
-                    throw new Exception("Unexpected API response format.");
-                }
-            }
-            catch (JsonException ex)
-            {
-                _logger.LogError(ex, "Error parsing Hugging Face response.");
-                throw new Exception("Failed to parse AI service response.", ex);
-            }
-        }
-        else
-        {
-            // Handle cases where the model is still loading
-            if (jsonResponse.Contains("currently loading"))
-            {
-                try
-                {
-                    using var document = JsonDocument.Parse(jsonResponse);
-                    if (document.RootElement.TryGetProperty("estimated_time", out var estimatedTime))
+                    if (jsonResponse.Contains("currently loading"))
                     {
-                        double waitTime = estimatedTime.GetDouble();
-                        _logger.LogWarning("Model is loading. Retrying after {WaitTime} seconds...", waitTime);
-                        await Task.Delay(TimeSpan.FromSeconds(waitTime));
-                        retryCount++;
-                        continue;
+                        try
+                        {
+                            using var document = JsonDocument.Parse(jsonResponse);
+                            if (document.RootElement.TryGetProperty("estimated_time", out var estimatedTime))
+                            {
+                                double waitTime = estimatedTime.GetDouble();
+                                _logger.LogWarning("Model is loading. Retrying after {WaitTime} seconds...", waitTime);
+                                await Task.Delay(TimeSpan.FromSeconds(waitTime));
+                                retryCount++;
+                                continue;
+                            }
+                        }
+                        catch (JsonException ex)
+                        {
+                            _logger.LogError(ex, "Error parsing loading response from Hugging Face.");
+                            throw new Exception("Failed to parse loading response from Hugging Face.", ex);
+                        }
                     }
-                }
-                catch (JsonException ex)
-                {
-                    _logger.LogError(ex, "Error parsing loading response from Hugging Face.");
-                    throw new Exception("Failed to parse loading response from Hugging Face.", ex);
+
+                    var errorResponse = jsonResponse;
+                    _logger.LogError("Hugging Face API returned an error: {ErrorResponse}", errorResponse);
+                    throw new Exception($"Hugging Face API error: {errorResponse}");
                 }
             }
 
-            var errorResponse = jsonResponse;
-            _logger.LogError("Hugging Face API returned an error: {ErrorResponse}", errorResponse);
-            throw new Exception($"Hugging Face API error: {errorResponse}");
+            throw new Exception("Failed to get a valid response from Hugging Face after multiple retries.");
+        }
+
+ public async Task<string> FetchKeywordDetailsAsync(string notes, string[] keywords)
+{
+    SetAuthorizationHeader(useModel2: false);
+
+    // Prompt updated to reduce the likelihood of including the prompt in the response
+    var keywordDetailsPrompt = $"Using these notes: \"{notes}\", explain the keywords {string.Join(", ", keywords)}. Only provide the explanations without repeating or referencing the prompt.";
+
+    var payload = new
+    {
+        inputs = keywordDetailsPrompt
+    };
+
+    var content = CreateHttpContent(payload);
+
+    var response = await _httpClient.PostAsync(MODEL_API_URL, content);
+
+    if (!response.IsSuccessStatusCode)
+    {
+        var errorResponse = await response.Content.ReadAsStringAsync();
+        _logger.LogError("Hugging Face API returned an error: {Error}", errorResponse);
+        throw new Exception($"Hugging Face API error: {errorResponse}");
+    }
+
+    var jsonResponse = await response.Content.ReadAsStringAsync();
+    _logger.LogInformation("Raw response from Hugging Face: {Response}", jsonResponse);
+
+    try
+    {
+        // Extract the generated response
+        var aiResponse = JsonDocument.Parse(jsonResponse).RootElement[0].GetProperty("generated_text").GetString();
+
+        if (string.IsNullOrWhiteSpace(aiResponse))
+        {
+            _logger.LogWarning("Hugging Face API returned an empty response.");
+            throw new Exception("The AI service returned an empty response.");
+        }
+
+        // Safeguard: Post-process the response to remove the prompt if included
+        var cleanedResponse = RemovePromptArtifacts(aiResponse, keywordDetailsPrompt);
+        _logger.LogInformation("Cleaned AI Response: {Response}", cleanedResponse);
+
+        return cleanedResponse;
+    }
+    catch (Exception ex)
+    {
+        _logger.LogError(ex, "Error parsing the response from Hugging Face API.");
+        throw new Exception("Failed to parse the response from the AI service.", ex);
+    }
+}
+
+// Helper method to remove artifacts of the prompt in the response
+private string RemovePromptArtifacts(string response, string prompt)
+{
+    // Remove the exact prompt if it appears in the response
+    if (response.Contains(prompt))
+    {
+        response = response.Replace(prompt, string.Empty).Trim();
+    }
+
+    // Remove any leading "Using these notes", "Explain the keywords", or similar artifacts
+    var artifacts = new[]
+    {
+        "Using these notes:",
+        "Explain the keywords:",
+        "Only provide the explanations:"
+    };
+
+    foreach (var artifact in artifacts)
+    {
+        if (response.StartsWith(artifact, StringComparison.OrdinalIgnoreCase))
+        {
+            response = response.Substring(artifact.Length).Trim();
         }
     }
 
-    throw new Exception("Failed to get a valid response from Hugging Face after multiple retries.");
+    // Remove any repeated notes if included
+    if (response.StartsWith("\"") && response.Contains("\""))
+    {
+        var firstQuoteIndex = response.IndexOf("\"", StringComparison.Ordinal);
+        var secondQuoteIndex = response.IndexOf("\"", firstQuoteIndex + 1, StringComparison.Ordinal);
+        if (secondQuoteIndex > firstQuoteIndex)
+        {
+            response = response.Substring(secondQuoteIndex + 1).Trim();
+        }
+    }
+
+    return response;
 }
 
 
