@@ -84,7 +84,8 @@ namespace EZNotes.Services
 
             var payload = new
             {
-                inputs = $"Define the term: {inputText}"
+                inputs = $"Define the following terms: {inputText}. Provide only definitions without any extra information.",
+                parameters = new { temperature = 0.2 }
             };
 
             var content = CreateHttpContent(payload);
@@ -108,7 +109,11 @@ namespace EZNotes.Services
                 throw new Exception("The AI service returned an empty response.");
             }
 
-            return aiResponse.Trim();
+            // Remove the prompt artifacts from the response
+            var cleanedResponse = RemovePromptArtifacts(aiResponse, inputText);
+            _logger.LogInformation("Cleaned AI Response: {Response}", cleanedResponse);
+
+            return cleanedResponse.Trim();
         }
 
         public async Task<string> GenerateLongSummaryAsync(string inputText)
@@ -209,98 +214,83 @@ namespace EZNotes.Services
             throw new Exception("Failed to get a valid response from Hugging Face after multiple retries.");
         }
 
- public async Task<string> FetchKeywordDetailsAsync(string notes, string[] keywords)
-{
-    SetAuthorizationHeader(useModel2: false);
-
-    // Prompt updated to reduce the likelihood of including the prompt in the response
-    var keywordDetailsPrompt = $"Using these notes: \"{notes}\", explain the keywords {string.Join(", ", keywords)}. Only provide the explanations without repeating or referencing the prompt.";
-
-    var payload = new
-    {
-        inputs = keywordDetailsPrompt
-    };
-
-    var content = CreateHttpContent(payload);
-
-    var response = await _httpClient.PostAsync(MODEL_API_URL, content);
-
-    if (!response.IsSuccessStatusCode)
-    {
-        var errorResponse = await response.Content.ReadAsStringAsync();
-        _logger.LogError("Hugging Face API returned an error: {Error}", errorResponse);
-        throw new Exception($"Hugging Face API error: {errorResponse}");
-    }
-
-    var jsonResponse = await response.Content.ReadAsStringAsync();
-    _logger.LogInformation("Raw response from Hugging Face: {Response}", jsonResponse);
-
-    try
-    {
-        // Extract the generated response
-        var aiResponse = JsonDocument.Parse(jsonResponse).RootElement[0].GetProperty("generated_text").GetString();
-
-        if (string.IsNullOrWhiteSpace(aiResponse))
+        public async Task<string> FetchKeywordDetailsAsync(string notes, string[] keywords)
         {
-            _logger.LogWarning("Hugging Face API returned an empty response.");
-            throw new Exception("The AI service returned an empty response.");
+            SetAuthorizationHeader(useModel2: false);
+
+            // Prompt updated to reduce the likelihood of including the prompt in the response
+            var keywordDetailsPrompt = $"You are given the following notes: \"{notes}\". Explain the keywords: {string.Join(", ", keywords)}. Only provide keyword explanations in list form, without including the prompt text or additional commentary.";
+
+            var payload = new
+            {
+                inputs = keywordDetailsPrompt
+            };
+
+            var content = CreateHttpContent(payload);
+
+            var response = await _httpClient.PostAsync(MODEL_API_URL, content);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorResponse = await response.Content.ReadAsStringAsync();
+                _logger.LogError("Hugging Face API returned an error: {Error}", errorResponse);
+                throw new Exception($"Hugging Face API error: {errorResponse}");
+            }
+
+            var jsonResponse = await response.Content.ReadAsStringAsync();
+            _logger.LogInformation("Raw response from Hugging Face: {Response}", jsonResponse);
+
+            try
+            {
+                // Extract the generated response
+                var aiResponse = JsonDocument.Parse(jsonResponse).RootElement[0].GetProperty("generated_text").GetString();
+
+                if (string.IsNullOrWhiteSpace(aiResponse))
+                {
+                    _logger.LogWarning("Hugging Face API returned an empty response.");
+                    throw new Exception("The AI service returned an empty response.");
+                }
+
+                // Safeguard: Post-process the response to remove the prompt if included
+                var cleanedResponse = RemovePromptArtifacts(aiResponse, keywordDetailsPrompt);
+                _logger.LogInformation("Cleaned AI Response: {Response}", cleanedResponse);
+
+                return cleanedResponse.Trim();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error parsing the response from Hugging Face API.");
+                throw new Exception("Failed to parse the response from the AI service.", ex);
+            }
         }
 
-        // Safeguard: Post-process the response to remove the prompt if included
-        var cleanedResponse = RemovePromptArtifacts(aiResponse, keywordDetailsPrompt);
-        _logger.LogInformation("Cleaned AI Response: {Response}", cleanedResponse);
-
-        return cleanedResponse;
-    }
-    catch (Exception ex)
-    {
-        _logger.LogError(ex, "Error parsing the response from Hugging Face API.");
-        throw new Exception("Failed to parse the response from the AI service.", ex);
-    }
-}
-
-// Helper method to remove artifacts of the prompt in the response
-private string RemovePromptArtifacts(string response, string prompt)
-{
-    // Remove the exact prompt if it appears in the response
-    if (response.Contains(prompt))
-    {
-        response = response.Replace(prompt, string.Empty).Trim();
-    }
-
-    // Remove any leading "Using these notes", "Explain the keywords", or similar artifacts
-    var artifacts = new[]
-    {
-        "Using these notes:",
-        "Explain the keywords:",
-        "Only provide the explanations:"
-    };
-
-    foreach (var artifact in artifacts)
-    {
-        if (response.StartsWith(artifact, StringComparison.OrdinalIgnoreCase))
+        // Helper method to remove artifacts of the prompt in the response
+        private string RemovePromptArtifacts(string response, string prompt)
         {
-            response = response.Substring(artifact.Length).Trim();
+            // Remove the exact prompt if it appears in the response
+            if (response.Contains(prompt))
+            {
+                response = response.Replace(prompt, string.Empty).Trim();
+            }
+
+            // Remove any leading or embedded artifacts
+            var artifacts = new[]
+            {
+                "You are given the following notes:",
+                "Explain the keywords:",
+                "Only provide keyword explanations in list form, without including the prompt text or additional commentary:",
+                "Define the following terms:",
+                "Provide only definitions without any extra information",
+                "Summarize this text concisely:",
+                "I'll ignore the additional gibberish at the end and provide the concise summary:"
+            };
+
+            foreach (var artifact in artifacts)
+            {
+                response = response.Replace(artifact, string.Empty).Trim();
+            }
+
+            return response;
         }
-    }
-
-    // Remove any repeated notes if included
-    if (response.StartsWith("\"") && response.Contains("\""))
-    {
-        var firstQuoteIndex = response.IndexOf("\"", StringComparison.Ordinal);
-        var secondQuoteIndex = response.IndexOf("\"", firstQuoteIndex + 1, StringComparison.Ordinal);
-        if (secondQuoteIndex > firstQuoteIndex)
-        {
-            response = response.Substring(secondQuoteIndex + 1).Trim();
-        }
-    }
-
-    return response;
-}
-
-
-
-
-
     }
 }

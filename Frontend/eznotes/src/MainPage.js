@@ -19,6 +19,7 @@ const EZNotes = () => {
   const [notesSlideContent, setNotesSlideContent] = useState("");
   const [wordCount, setWordCount] = useState(0);
   const [content, setContent] = useState('');
+  const [summaryContent, setSummaryContent] = useState('');
   const textAreaRef = useRef(null);
   const summaryPopupRef = useRef(null);
   const definePopupRef = useRef(null);
@@ -46,13 +47,14 @@ const EZNotes = () => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ inputText: content }),
+        body: JSON.stringify({  InputText: summaryContent }),
       });
       if (!response.ok) {
         throw new Error('Failed to generate a long summary');
       }
       const data = await response.json();
       setNotesSlideContent(data.summary);
+      setContent(data.summary); // Update main content box with the summary
       setShowSummary(false);
     } catch (error) {
       console.error('Error:', error);
@@ -76,7 +78,12 @@ const EZNotes = () => {
         throw new Error('Failed to define words');
       }
       const data = await response.json();
-      setNotesSlideContent(data.definitions);
+      if (data.definitions) {
+        setNotesSlideContent(data.definitions);
+        setContent(data.definitions); // Update main content box with the definitions
+      } else {
+        throw new Error('Invalid response format');
+      }
       setShowDefine(false);
     } catch (error) {
       console.error('Error:', error);
@@ -126,8 +133,6 @@ const EZNotes = () => {
         console.log("API Response:", data); // Debugging output
         setContent(data.keywordDetails);
         setShowKeywordsNoteSlide(false);
-        // // setNotesSlideContent(data.keywordDetails);
-        // setNotesSlideContent(data.keywordDetails); // Populate results
         setShowKeywords(false);
     } catch (error) {
         console.error("Error:", error);
@@ -139,40 +144,29 @@ const EZNotes = () => {
 
   const handleOptionSelect = (option) => {
     setShowOptions(false);
+    setShowSummary(false);
+    setShowDefine(false);
+    setShowKeywords(false);
+    setShowKeywordsNoteSlide(false);
 
     switch (option) {
       case 'summary':
         setButtonLabel("Summarize");
         setShowSummary(true);
-        setShowDefine(false);
-        setShowKeywords(false);
-        // setShowKeywordsNoteSlide(true); // Ensuring the note slide appears when keywords are selected
         break;
       case 'define':
         setButtonLabel("Define");
         setShowDefine(true);
-        setShowSummary(false);
-        setShowKeywords(false);
-        setShowKeywordsNoteSlide(true);
         setDefinitions([""]);
         break;
       case 'keywords':
         setButtonLabel("Keywords");
         setShowKeywords(true);
-        setShowSummary(false);
-        setShowDefine(false);
         setShowKeywordsNoteSlide(true);
         setKeywords([""]);
         break;
       default:
         setButtonLabel("Options");
-        setShowSummary(false);
-        setShowDefine(false);
-        setShowKeywords(false);
-        setShowKeywordsNoteSlide(false);
-        setDefinitions([""]);
-        setKeywords([""]);
-        setNotesSlideContent("");
         break;
     }
   };
@@ -654,7 +648,7 @@ const EZNotes = () => {
                   : "0 4px 6px rgba(0, 0, 0, 0.1)",
               }}
             >
-              {['summary', 'define', 'keywords'].map((option) => (
+              {["summary", "define", "keywords"].map((option) => (
                 <div
                   key={option}
                   style={{
@@ -690,8 +684,8 @@ const EZNotes = () => {
             </div>
             <div style={styles.summaryContent}>
               <textarea
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
+                value={summaryContent}
+                onChange={(e) => setSummaryContent(e.target.value)}
                 style={{
                   width: "95%",
                   height: "calc(100% - 48px)",
@@ -715,7 +709,7 @@ const EZNotes = () => {
                   cursor: "pointer",
                 }}
               >
-                <span>{isGeneratingSummary ? "Summarize" : "Summarize"}</span>
+                <span>{isGeneratingSummary ? "Summarizing..." : "Summarize"}</span>
                 {isGeneratingSummary && (
                   <Loader2 size={16} style={styles.loadingIcon} />
                 )}
@@ -771,7 +765,7 @@ const EZNotes = () => {
                   cursor: "pointer",
                 }}
               >
-                <span>{isGeneratingDefine ? "Define" : "Define"}</span>
+                <span>{isGeneratingDefine ? "Defining..." : "Define"}</span>
                 {isGeneratingDefine && (
                   <Loader2 size={16} style={styles.loadingIcon} />
                 )}
@@ -842,7 +836,7 @@ const EZNotes = () => {
         )}
 
         {/* Keywords Note Slide */}
-        {showKeywordsNoteSlide && (
+        {showKeywords && showKeywordsNoteSlide && (
           <div
             ref={keywordsNoteSlidePopupRef}
             style={{ ...styles.summaryPopup, top: "50%", width: "400px" }}
